@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>VINs To Barcode</title>
+    <link rel="icon" type="image/png" href="https://dvi.rowriter.com/images/icon80.png">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2em; background: #f3f4f6;}
+        .container { max-width: 480px; margin: 2em auto; background: #fff; border-radius: 1em; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 2em 2em 2.5em 2em; text-align: center;}
+        .barcode-box { margin: 2em 0 1em 0; padding: 1.5em 1em; background: linear-gradient(135deg, #f8fafc 0%, #e0e7ef 100%); border-radius: 1em; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-direction: column; align-items: center; min-height: 200px;}
+        .vin-code { margin-top: 1.2em; font-size: 1.2em; color: #374151; font-weight: bold; letter-spacing: 0.04em; background: #f1f5f9; border-radius: 0.5em; padding: 0.5em 1.2em; box-shadow: 0 1px 4px rgba(0,0,0,0.04); word-break: break-all;}
+        .random-btn { background: linear-gradient(90deg, #10b981 0%, #06b6d4 100%); color: #fff; border: none; border-radius: 0.5em; padding: 0.8em 2em; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.2s; margin-top: 1.5em; box-shadow: 0 2px 8px rgba(16,185,129,0.08);}
+        .random-btn:hover { background: linear-gradient(90deg, #06b6d4 0%, #10b981 100%); transform: translateY(-2px) scale(1.03);}
+        .download-link { display: block; margin-top: 2em; color: #2563eb; font-weight: 500; text-decoration: none; transition: color 0.2s;}
+        .download-link:hover { color: #0ea5e9; text-decoration: underline;}
+        .copy-message { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #10b981; color: #fff; padding: 0.7em 2em; border-radius: 0.7em; font-size: 1em; opacity: 0; pointer-events: none; transition: opacity 0.4s; z-index: 1000;}
+        .copy-message.show { opacity: 1;}
+        .file-input { margin-top: 1em; }
+        h4 { color: #043b20c9; font-size: 1.2em; font-weight: 500; margin: 0.5em 0; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>VINs to Barcode Viewer</h1>
+        <h4 id="step1"> 1.Click Download VIN CSV and download the file</h4>
+        <h4 id="step2"> 2.Now Choose that downloaded file</h4>
+        <input class="file-input" type="file" id="csvFile" accept=".csv">
+        <div class="barcode-box" id="barcodeBox" style="display:none;">
+            <div style="width:100%;overflow-x:auto;display:flex;justify-content:center;">
+                <svg id="barcode" width="100%" height="120" style="max-width:320px;min-width:0;display:block;"></svg>
+            </div>
+            <div class="vin-code" id="vinCode"></div>
+        </div>
+        <button class="random-btn" id="randomBtn" style="display:none;">Random VIN</button>
+        <a class="download-link" href="https://drive.google.com/file/d/12mcx0A39gu0DNgMR0V9FKIxD0_6lv9zr/view?usp=sharing" target="_blank">
+            Download VIN CSV
+        </a>
+    </div>
+    <div id="copyMessage" class="copy-message">VIN Copied!</div>
+    <script>
+        let vins = [];
+        let currentVin = "";
+
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                vins = evt.target.result.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
+                if (vins.length === 0) {
+                    document.getElementById('vinCode').textContent = "No VINs found in CSV.";
+                    document.getElementById('barcodeBox').style.display = "none";
+                    document.getElementById('randomBtn').style.display = "none";
+                    return;
+                }
+                // Hide steps and file input after file is loaded
+                document.getElementById('step1').style.display = "none";
+                document.getElementById('step2').style.display = "none";
+                document.getElementById('csvFile').style.display = "none";
+                document.getElementById('barcodeBox').style.display = "";
+                document.getElementById('randomBtn').style.display = "";
+                showRandomVin();
+            };
+            reader.readAsText(file);
+        });
+
+        function showRandomVin() {
+            if (!vins.length) return;
+            const idx = Math.floor(Math.random() * vins.length);
+            currentVin = vins[idx];
+            renderBarcode(currentVin);
+        }
+
+        function renderBarcode(vin) {
+            const barcodeSvg = document.getElementById('barcode');
+            JsBarcode(barcodeSvg, vin, {
+                format: "CODE128",
+                lineColor: "#222",
+                width: 2,
+                height: 80,
+                displayValue: false,
+                margin: 0
+            });
+            document.getElementById('vinCode').textContent = vin;
+        }
+
+        document.getElementById('randomBtn').addEventListener('click', showRandomVin);
+
+        document.getElementById('barcodeBox').addEventListener('click', function() {
+            if (!currentVin) return;
+            const textarea = document.createElement('textarea');
+            textarea.value = currentVin;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showCopyMessage();
+            } catch (e) {}
+            document.body.removeChild(textarea);
+        });
+
+        function showCopyMessage() {
+            const msg = document.getElementById('copyMessage');
+            msg.classList.add('show');
+            setTimeout(() => msg.classList.remove('show'), 1500);
+        }
+    </script>
+</body>
+</html>
